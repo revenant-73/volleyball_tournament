@@ -10,6 +10,7 @@ export interface PoolMatch {
   team2Id: string;
   team1Sets: number | null;
   team2Sets: number | null;
+  workTeamId: string;
   completed: boolean;
   poolId: number;
 }

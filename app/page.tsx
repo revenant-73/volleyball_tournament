@@ -1,135 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Team, TournamentState } from "@/types/tournament";
-import { generatePoolMatches, generateBrackets } from "@/utils/tournament";
-import TeamSetup from "@/components/TeamSetup";
+import { useState } from "react";
+import { useTournamentSync } from "@/hooks/useTournamentSync";
 import PoolPlay from "@/components/PoolPlay";
 import BracketView from "@/components/BracketView";
+import Link from "next/link";
 
-type Phase = "setup" | "pool-play" | "bracket";
+type Phase = "pool-play" | "bracket";
 
-export default function Home() {
-  const [phase, setPhase] = useState<Phase>("setup");
-  const [tournamentState, setTournamentState] = useState<TournamentState>({
-    teams: [],
-    poolMatches: [],
-    pools: {},
-    bracketMatches: [],
-    bracketGenerated: false,
-    goldBracketRoots: [],
-    silverBracketRoots: [],
-  });
+export default function PublicPage() {
+  const { tournamentState, loading } = useTournamentSync();
+  const [phase, setPhase] = useState<Phase>("pool-play");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("tournamentState");
-    if (saved) {
-      setTournamentState(JSON.parse(saved));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("tournamentState", JSON.stringify(tournamentState));
-  }, [tournamentState]);
-
-  const handleTeamsAdded = (teams: Team[]) => {
-    const poolMatches = generatePoolMatches(teams);
-    setTournamentState({
-      ...tournamentState,
-      teams,
-      poolMatches,
-    });
-    setPhase("pool-play");
-  };
-
-  const handlePoolMatchUpdate = (matchId: string, team1Sets: number, team2Sets: number) => {
-    setTournamentState({
-      ...tournamentState,
-      poolMatches: tournamentState.poolMatches.map((m) =>
-        m.id === matchId
-          ? {
-              ...m,
-              team1Sets,
-              team2Sets,
-              completed: true,
-            }
-          : m
-      ),
-    });
-  };
-
-  const handleGenerateBrackets = () => {
-    const { bracketMatches, goldBracketRoots, silverBracketRoots } = generateBrackets(
-      tournamentState.teams,
-      tournamentState.poolMatches
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-xl animate-pulse">Loading tournament data...</div>
+      </div>
     );
-    setTournamentState({
-      ...tournamentState,
-      bracketMatches,
-      goldBracketRoots,
-      silverBracketRoots,
-      bracketGenerated: true,
-    });
-    setPhase("bracket");
-  };
+  }
 
-  const handleBracketMatchUpdate = (matchId: string, team1Sets: number, team2Sets: number) => {
-    setTournamentState({
-      ...tournamentState,
-      bracketMatches: tournamentState.bracketMatches.map((m) =>
-        m.id === matchId
-          ? {
-              ...m,
-              team1Sets,
-              team2Sets,
-              completed: true,
-              winnerId: team1Sets > team2Sets ? m.team1Id : m.team2Id,
-            }
-          : m
-      ),
-    });
-  };
-
-  const handleReset = () => {
-    setTournamentState({
-      teams: [],
-      poolMatches: [],
-      pools: {},
-      bracketMatches: [],
-      bracketGenerated: false,
-      goldBracketRoots: [],
-      silverBracketRoots: [],
-    });
-    setPhase("setup");
-  };
+  if (tournamentState.teams.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-3xl font-bold mb-4">No Active Tournament</h1>
+        <p className="text-slate-400 mb-8">The tournament has not been set up yet. Check back later!</p>
+        <Link href="/admin" className="text-blue-400 hover:underline">Go to Admin Setup</Link>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-6">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Volleyball Tournament</h1>
-          <p className="text-slate-400">Pool play and bracket management</p>
+          <h1 className="text-4xl font-bold mb-2">Tournament Schedule</h1>
+          <p className="text-slate-400">Live results and standings</p>
         </header>
 
         <div className="mb-6 flex gap-4">
           <button
-            onClick={() => setPhase("setup")}
-            className={`px-4 py-2 rounded font-medium transition ${
-              phase === "setup"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-            }`}
-          >
-            Setup
-          </button>
-          <button
             onClick={() => setPhase("pool-play")}
-            disabled={tournamentState.teams.length === 0}
             className={`px-4 py-2 rounded font-medium transition ${
               phase === "pool-play"
                 ? "bg-blue-600 text-white"
-                : tournamentState.teams.length === 0
-                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
                 : "bg-slate-700 text-slate-300 hover:bg-slate-600"
             }`}
           >
@@ -148,22 +62,13 @@ export default function Home() {
           >
             Bracket
           </button>
-          <button
-            onClick={handleReset}
-            className="ml-auto px-4 py-2 rounded font-medium bg-red-900 text-red-100 hover:bg-red-800 transition"
-          >
-            Reset
-          </button>
         </div>
-
-        {phase === "setup" && <TeamSetup onTeamsAdded={handleTeamsAdded} />}
 
         {phase === "pool-play" && (
           <PoolPlay
             teams={tournamentState.teams}
             poolMatches={tournamentState.poolMatches}
-            onMatchUpdate={handlePoolMatchUpdate}
-            onGenerateBrackets={handleGenerateBrackets}
+            readOnly={true}
           />
         )}
 
@@ -173,9 +78,13 @@ export default function Home() {
             bracketMatches={tournamentState.bracketMatches}
             goldBracketRoots={tournamentState.goldBracketRoots}
             silverBracketRoots={tournamentState.silverBracketRoots}
-            onMatchUpdate={handleBracketMatchUpdate}
+            readOnly={true}
           />
         )}
+        
+        <footer className="mt-12 pt-8 border-t border-slate-800 text-center text-slate-500 text-sm">
+          <p>&copy; {new Date().getFullYear()} Volleyball Tournament Management</p>
+        </footer>
       </div>
     </main>
   );

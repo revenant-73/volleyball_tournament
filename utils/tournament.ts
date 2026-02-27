@@ -4,20 +4,48 @@ export function generatePoolMatches(teams: Team[]): PoolMatch[] {
   const matches: PoolMatch[] = [];
   let id = 0;
 
-  for (let pool = 1; pool <= 3; pool++) {
+  const poolIds = Array.from(new Set(teams.map((t) => t.pool).filter((p): p is number => p !== undefined))).sort((a, b) => a - b);
+
+  for (const pool of poolIds) {
     const poolTeams = teams.filter((t) => t.pool === pool);
 
-    for (let i = 0; i < poolTeams.length; i++) {
-      for (let j = i + 1; j < poolTeams.length; j++) {
+    if (poolTeams.length === 4) {
+      const schedule = [
+        { t1: 0, t2: 2, w: 1 }, // Team 1 vs Team 3, Work: Team 2
+        { t1: 1, t2: 3, w: 0 }, // Team 2 vs Team 4, Work: Team 1
+        { t1: 0, t2: 3, w: 2 }, // Team 1 vs Team 4, Work: Team 3
+        { t1: 1, t2: 2, w: 0 }, // Team 2 vs Team 3, Work: Team 1
+        { t1: 2, t2: 3, w: 1 }, // Team 3 vs Team 4, Work: Team 2
+        { t1: 0, t2: 1, w: 3 }, // Team 1 vs Team 2, Work: Team 4
+      ];
+
+      schedule.forEach((m) => {
         matches.push({
           id: `match-${id++}`,
-          team1Id: poolTeams[i].id,
-          team2Id: poolTeams[j].id,
+          team1Id: poolTeams[m.t1].id,
+          team2Id: poolTeams[m.t2].id,
+          workTeamId: poolTeams[m.w].id,
           team1Sets: null,
           team2Sets: null,
           completed: false,
           poolId: pool,
         });
+      });
+    } else {
+      for (let i = 0; i < poolTeams.length; i++) {
+        for (let j = i + 1; j < poolTeams.length; j++) {
+          const workTeamIndex = (j + 1) % poolTeams.length;
+          matches.push({
+            id: `match-${id++}`,
+            team1Id: poolTeams[i].id,
+            team2Id: poolTeams[j].id,
+            workTeamId: poolTeams[workTeamIndex].id,
+            team1Sets: null,
+            team2Sets: null,
+            completed: false,
+            poolId: pool,
+          });
+        }
       }
     }
   }

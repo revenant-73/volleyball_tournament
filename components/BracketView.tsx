@@ -9,7 +9,8 @@ interface BracketViewProps {
   bracketMatches: BracketMatch[];
   goldBracketRoots: string[];
   silverBracketRoots: string[];
-  onMatchUpdate: (matchId: string, team1Sets: number, team2Sets: number) => void;
+  onMatchUpdate?: (matchId: string, team1Sets: number, team2Sets: number) => void;
+  readOnly?: boolean;
 }
 
 export default function BracketView({
@@ -18,6 +19,7 @@ export default function BracketView({
   goldBracketRoots,
   silverBracketRoots,
   onMatchUpdate,
+  readOnly = false,
 }: BracketViewProps) {
   const [activeBracket, setActiveBracket] = useState<"gold" | "silver">("gold");
 
@@ -54,11 +56,11 @@ export default function BracketView({
             )}
           </div>
         </div>
-        {!match.completed && (
+        {!match.completed && !readOnly && (
           <div className="mt-3 pt-3 border-t border-slate-600">
             <MatchResult
               matchId={match.id}
-              onSubmit={(team1Sets, team2Sets) => onMatchUpdate(match.id, team1Sets, team2Sets)}
+              onSubmit={(team1Sets, team2Sets) => onMatchUpdate?.(match.id, team1Sets, team2Sets)}
             />
           </div>
         )}
